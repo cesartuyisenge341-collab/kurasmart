@@ -1,0 +1,79 @@
+# Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+pubspec.lock
+build/
+
+# Android
+android/.gradle
+android/local.properties
+android/app/google-services.json
+android/app/debug.keystore
+.android/
+*.apk
+*.jks
+*.keystore
+
+# iOS
+ios/Pods/
+ios/Podfile.lock
+.ios/
+*.ipa
+*.dSYM
+
+# Environment
+.env
+.env.local
+.env.*
+!.env.example
+.env.*.local
+service-account-key.json
+**/service-account-key.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.iml
+
+# Logs
+*.log
+npm-debug.log
+yarn-error.log
+
+# Misc
+.dart_tool
+.idea
+*.iml
+*.lock
+pubspec.lock
+.gradle
+.android
+build/
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+
+# Firebase
+google-services.json
+GoogleService-Info.plist
+
+# Expo / React Native
+node_modules/
+.expo/
+dist/
+web-build/
+/mobile/.env
+
+# Local development
+.env.development.local
+credentials.json
+api_keys.txt
+# Widget Preview related
+.widget_preview/

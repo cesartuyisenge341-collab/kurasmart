@@ -1,0 +1,49 @@
+{
+  "functions": [
+    {
+      "source": "src",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-functions-debug.log"
+      ]
+    }
+  ],
+  "firestore": {
+    "rules": "../firestore/firestore.rules",
+    "indexes": "../firestore/firestore-indexes.json"
+  },
+  "database": {
+    "rules": "../realtime-db/database.rules.json"
+  },
+  "storage": {
+    "rules": "../storage/storage.rules"
+  },
+  "hosting": {
+    "public": "public",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ]
+  },
+  "emulators": {
+    "functions": {
+      "port": 5001
+    },
+    "firestore": {
+      "port": 8080
+    },
+    "database": {
+      "port": 9000
+    },
+    "storage": {
+      "port": 4000
+    },
+    "ui": {
+      "enabled": true
+    }
+  }
+}

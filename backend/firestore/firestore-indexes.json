@@ -1,0 +1,158 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "children",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "userId", "order": "ASCENDING"},
+        {"fieldPath": "createdAt", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "children",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "parentUid", "order": "ASCENDING"},
+        {"fieldPath": "createdAt", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "sensorReadings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "childId", "order": "ASCENDING"},
+        {"fieldPath": "timestamp", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "sensorReadings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "deviceId", "order": "ASCENDING"},
+        {"fieldPath": "timestamp", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "alerts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "childId", "order": "ASCENDING"},
+        {"fieldPath": "triggeredAt", "order": "ASCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "alerts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "childId", "order": "ASCENDING"},
+        {"fieldPath": "triggeredAt", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "biometricHistory",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "childId", "order": "ASCENDING"},
+        {"fieldPath": "date", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "careLog",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "childId", "order": "ASCENDING"},
+        {"fieldPath": "loggedAt", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "growthRecords",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "childId", "order": "ASCENDING"},
+        {"fieldPath": "measuredOn", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "notifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "userId", "order": "ASCENDING"},
+        {"fieldPath": "sentAt", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "childProgress",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "childId", "order": "ASCENDING"},
+        {"fieldPath": "updatedAt", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "lessons",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "isPublished", "order": "ASCENDING"},
+        {"fieldPath": "minAgeMonths", "order": "ASCENDING"},
+        {"fieldPath": "maxAgeMonths", "order": "ASCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "learningCategories",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "isPublished", "order": "ASCENDING"},
+        {"fieldPath": "sortOrder", "order": "ASCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "learningSchedules",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "childId", "order": "ASCENDING"},
+        {"fieldPath": "scheduledAt", "order": "ASCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "learningSessions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "childId", "order": "ASCENDING"},
+        {"fieldPath": "startedAt", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "learningAttempts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "sessionId", "order": "ASCENDING"},
+        {"fieldPath": "createdAt", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "temperatureReadings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "childId", "order": "ASCENDING"},
+        {"fieldPath": "recordedAt", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "locationReadings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "childId", "order": "ASCENDING"},
+        {"fieldPath": "recordedAt", "order": "DESCENDING"}
+      ]
+    },
+    {
+      "collectionGroup": "soundEvents",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "childId", "order": "ASCENDING"},
+        {"fieldPath": "startedAt", "order": "DESCENDING"}
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

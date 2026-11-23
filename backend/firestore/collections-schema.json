@@ -1,0 +1,862 @@
+{
+  "collections": {
+    "users": {
+      "description": "User accounts (parents/caregivers)",
+      "fields": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID (document ID)"
+        },
+        "fullName": {
+          "type": "string",
+          "description": "User's full name"
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address (unique)",
+          "index": true
+        },
+        "phone": {
+          "type": "string",
+          "description": "Phone number"
+        },
+        "photoUrl": {
+          "type": "string",
+          "description": "Cloud Storage URL to user photo"
+        },
+        "language": {
+          "type": "enum",
+          "values": ["en", "rw", "fr"],
+          "description": "Preferred language"
+        },
+        "fcmTokens": {
+          "type": "array",
+          "items": "string",
+          "description": "Firebase Cloud Messaging tokens for devices"
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Account active status"
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "description": "Account creation time"
+        },
+        "updatedAt": {
+          "type": "timestamp",
+          "description": "Last update time"
+        },
+        "settings": {
+          "type": "map",
+          "description": "User preferences",
+          "fields": {
+            "tempUnit": {
+              "type": "enum",
+              "values": ["C", "F"]
+            },
+            "weightUnit": {
+              "type": "enum",
+              "values": ["kg", "lb"]
+            },
+            "heightUnit": {
+              "type": "enum",
+              "values": ["cm", "in"]
+            },
+            "pushEnabled": {
+              "type": "boolean"
+            },
+            "theme": {
+              "type": "enum",
+              "values": ["light", "dark"]
+            },
+
+            "milestones": {
+              "description": "Admin-managed, age-appropriate development milestone catalog",
+              "fields": {
+                "title": {"type": "string"},
+                "description": {"type": "string"},
+                "domain": {"type": "enum", "values": ["motor", "language", "cognitive", "social_emotional", "self_care"]},
+                "minAgeMonths": {"type": "integer"},
+                "maxAgeMonths": {"type": "integer"},
+                "isPublished": {"type": "boolean"},
+                "createdAt": {"type": "timestamp"},
+                "updatedAt": {"type": "timestamp"}
+              }
+            },
+
+            "childProgress": {
+              "description": "Parent-recorded progress for a child's milestone",
+              "fields": {
+                "childId": {"type": "string", "index": true},
+                "milestoneId": {"type": "string"},
+                "status": {"type": "enum", "values": ["not_started", "observed", "in_progress", "completed"]},
+                "observation": {"type": "string"},
+                "observedAt": {"type": "timestamp"},
+                "recordedBy": {"type": "string"},
+                "createdAt": {"type": "timestamp"},
+                "updatedAt": {"type": "timestamp"}
+              },
+              "indexes": [
+                {"fields": [{"childId": "asc"}, {"updatedAt": "desc"}], "description": "List progress for a child"}
+              ]
+            },
+
+            "learningCategories": {
+              "description": "Admin-managed lesson categories",
+              "fields": {
+                "name": {"type": "string"},
+                "description": {"type": "string"},
+                "sortOrder": {"type": "integer"},
+                "isPublished": {"type": "boolean"},
+                "createdAt": {"type": "timestamp"},
+                "updatedAt": {"type": "timestamp"}
+              }
+            },
+
+            "lessons": {
+              "description": "Admin-managed age-appropriate learning lessons",
+              "fields": {
+                "title": {"type": "string"},
+                "description": {"type": "string"},
+                "categoryId": {"type": "string", "index": true},
+                "minAgeMonths": {"type": "integer"},
+                "maxAgeMonths": {"type": "integer"},
+                "language": {"type": "enum", "values": ["en", "rw", "fr"]},
+                "audioAssetId": {"type": "string"},
+                "isPublished": {"type": "boolean"},
+                "createdAt": {"type": "timestamp"},
+                "updatedAt": {"type": "timestamp"}
+              },
+              "indexes": [
+                {"fields": [{"isPublished": "asc"}, {"minAgeMonths": "asc"}], "description": "Find published lessons by minimum age"}
+              ]
+            },
+
+            "audioAssets": {
+              "description": "Metadata for lesson audio stored in Firebase Storage; audio bytes are not stored in Firestore",
+              "fields": {
+                "storagePath": {"type": "string"},
+                "language": {"type": "enum", "values": ["en", "rw", "fr"]},
+                "durationSeconds": {"type": "number"},
+                "contentType": {"type": "string"},
+                "isPublished": {"type": "boolean"},
+                "createdAt": {"type": "timestamp"},
+                "updatedAt": {"type": "timestamp"}
+              }
+            },
+
+            "learningSchedules": {
+              "description": "Parent-managed scheduled learning activities",
+              "fields": {
+                "childId": {"type": "string", "index": true},
+                "lessonId": {"type": "string"},
+                "scheduledAt": {"type": "timestamp"},
+                "status": {"type": "enum", "values": ["scheduled", "completed", "cancelled"]},
+                "createdBy": {"type": "string"},
+                "createdAt": {"type": "timestamp"},
+                "updatedAt": {"type": "timestamp"}
+              },
+              "indexes": [
+                {"fields": [{"childId": "asc"}, {"scheduledAt": "asc"}], "description": "List a child's scheduled lessons"}
+              ]
+            },
+
+            "learningSessions": {
+              "description": "History and state of a child's learning session",
+              "fields": {
+                "childId": {"type": "string", "index": true},
+                "lessonId": {"type": "string"},
+                "scheduleId": {"type": "string"},
+                "status": {"type": "enum", "values": ["started", "paused", "completed", "abandoned"]},
+                "startedAt": {"type": "timestamp"},
+                "endedAt": {"type": "timestamp"},
+                "durationSeconds": {"type": "integer"},
+                "createdBy": {"type": "string"},
+                "createdAt": {"type": "timestamp"}
+              },
+              "indexes": [
+                {"fields": [{"childId": "asc"}, {"startedAt": "desc"}], "description": "List a child's session history"}
+              ]
+            },
+
+            "learningAttempts": {
+              "description": "Assessment results for supported lesson responses; not a measure of intelligence or overall development",
+              "fields": {
+                "childId": {"type": "string", "index": true},
+                "sessionId": {"type": "string", "index": true},
+                "promptId": {"type": "string"},
+                "language": {"type": "enum", "values": ["en", "rw", "fr"]},
+                "feedback": {"type": "enum", "values": ["excellent", "very_good", "good", "try_again", "unable_to_assess"]},
+                "confidence": {"type": "number", "description": "Model confidence for this supported response only; not a developmental score"},
+                "modelVersionId": {"type": "string"},
+                "createdAt": {"type": "timestamp"}
+              }
+            },
+
+            "caregiverContacts": {
+              "description": "Parent-managed emergency and authorized caregiver contacts for a child",
+              "fields": {
+                "childId": {"type": "string", "index": true},
+                "name": {"type": "string"},
+                "relationship": {"type": "string"},
+                "phone": {"type": "string"},
+                "email": {"type": "string"},
+                "caregiverUid": {"type": "string"},
+                "isAuthorized": {"type": "boolean"},
+                "createdAt": {"type": "timestamp"},
+                "updatedAt": {"type": "timestamp"}
+              }
+            },
+
+            "safeZones": {
+              "description": "Parent-defined geographic safe zones; location coordinates are private child data",
+              "fields": {
+                "childId": {"type": "string", "index": true},
+                "name": {"type": "string"},
+                "latitude": {"type": "number"},
+                "longitude": {"type": "number"},
+                "radiusMeters": {"type": "number"},
+                "isActive": {"type": "boolean"},
+                "createdAt": {"type": "timestamp"},
+                "updatedAt": {"type": "timestamp"}
+              }
+            },
+
+            "temperatureReadings": {
+              "description": "Wearable temperature measurements; distinct from legacy biometric sensorReadings",
+              "fields": {
+                "childId": {"type": "string", "index": true},
+                "deviceId": {"type": "string", "index": true},
+                "temperatureC": {"type": "number"},
+                "recordedAt": {"type": "timestamp", "index": true},
+                "source": {"type": "enum", "values": ["wearable", "paired_device"]},
+                "isSimulated": {"type": "boolean", "description": "Must be true for test/simulated data"}
+              },
+              "indexes": [
+                {"fields": [{"childId": "asc"}, {"recordedAt": "desc"}], "description": "Fetch temperature history for a child"}
+              ]
+            },
+
+            "locationReadings": {
+              "description": "Private wearable GPS readings for authorized guardians",
+              "fields": {
+                "childId": {"type": "string", "index": true},
+                "deviceId": {"type": "string", "index": true},
+                "latitude": {"type": "number"},
+                "longitude": {"type": "number"},
+                "accuracyMeters": {"type": "number"},
+                "recordedAt": {"type": "timestamp", "index": true},
+                "isSimulated": {"type": "boolean", "description": "Must be true for test/simulated data"}
+              },
+              "indexes": [
+                {"fields": [{"childId": "asc"}, {"recordedAt": "desc"}], "description": "Fetch location history for a child"}
+              ]
+            },
+
+            "soundEvents": {
+              "description": "Supported sound-event classifications; never stores a diagnosis or inferred reason for crying",
+              "fields": {
+                "childId": {"type": "string", "index": true},
+                "deviceId": {"type": "string"},
+                "eventType": {"type": "enum", "values": ["crying", "shouting", "speech", "laughter", "background_noise"]},
+                "confidence": {"type": "number"},
+                "startedAt": {"type": "timestamp"},
+                "durationSeconds": {"type": "number"},
+                "modelVersionId": {"type": "string"},
+                "isSimulated": {"type": "boolean", "description": "Must be true for test/simulated data"}
+              },
+              "indexes": [
+                {"fields": [{"childId": "asc"}, {"startedAt": "desc"}], "description": "List a child's sound events"}
+              ]
+            },
+
+            "modelVersions": {
+              "description": "Admin-managed AI model registry",
+              "fields": {
+                "name": {"type": "string"},
+                "version": {"type": "string"},
+                "task": {"type": "enum", "values": ["sound_event_detection", "learning_assessment"]},
+                "languages": {"type": "array", "items": "string"},
+                "status": {"type": "enum", "values": ["testing", "active", "retired"]},
+                "createdAt": {"type": "timestamp"},
+                "updatedAt": {"type": "timestamp"}
+              }
+            }
+          },
+          "security": {
+            "adminAuthorization": "Use Firebase Auth custom claims managed by a trusted server. Never store an admin role that a client can assign in a user profile document.",
+            "deviceAuthorization": "Issue device custom claims only from a trusted server; rules must bind each event's childId and deviceId to those claims.",
+            "migration": "These schema additions are non-destructive. Do not delete or bulk-rewrite existing user, child, device, sensorReadings, alert, or history documents."
+          }
+        }
+      }
+    },
+
+    "children": {
+      "description": "Child profiles",
+      "fields": {
+        "id": {
+          "type": "string",
+          "description": "UUID (document ID)"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Parent's UID (foreign key)",
+          "index": true
+        },
+        "name": {
+          "type": "string",
+          "description": "Child's name"
+        },
+        "dateOfBirth": {
+          "type": "string",
+          "format": "YYYY-MM-DD",
+          "description": "Birth date for age calculation"
+        },
+        "gender": {
+          "type": "enum",
+          "values": ["male", "female", "other"],
+          "description": "Child's gender"
+        },
+        "photoUrl": {
+          "type": "string",
+          "description": "Cloud Storage URL to child photo"
+        },
+        "birthWeight": {
+          "type": "number",
+          "description": "Birth weight in kg"
+        },
+        "birthLength": {
+          "type": "number",
+          "description": "Birth length in cm"
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Monitoring active status"
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "description": "Profile creation time"
+        },
+        "updatedAt": {
+          "type": "timestamp",
+          "description": "Last update time"
+        }
+      },
+      "subcollections": {
+        "caregivers": {
+          "description": "Authorized caregivers for this child",
+          "fields": {
+            "caregiverId": {
+              "type": "string",
+              "description": "Caregiver's UID (document ID)"
+            },
+            "role": {
+              "type": "enum",
+              "values": ["owner", "caregiver", "viewer"],
+              "description": "Permission level"
+            },
+            "addedAt": {
+              "type": "timestamp",
+              "description": "When caregiver was added"
+            }
+          }
+        }
+      }
+    },
+
+    "devices": {
+      "description": "IoT devices (ESP32 monitors)",
+      "fields": {
+        "id": {
+          "type": "string",
+          "description": "UUID (document ID)"
+        },
+        "deviceId": {
+          "type": "string",
+          "description": "Physical device identifier (MAC address)",
+          "index": true,
+          "unique": true
+        },
+        "userId": {
+          "type": "string",
+          "description": "Owner's UID (foreign key)",
+          "index": true
+        },
+        "childId": {
+          "type": "string",
+          "description": "Associated child UUID"
+        },
+        "deviceName": {
+          "type": "string",
+          "description": "User-friendly device name"
+        },
+        "deviceType": {
+          "type": "string",
+          "description": "Device model (e.g., 'esp32_biometric')"
+        },
+        "apiKey": {
+          "type": "string",
+          "description": "Device API key (hashed)"
+        },
+        "firmwareVersion": {
+          "type": "string",
+          "description": "Current firmware version"
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Device active/pairing status"
+        },
+        "lastSeen": {
+          "type": "timestamp",
+          "description": "Last data received time",
+          "index": true
+        },
+        "location": {
+          "type": "string",
+          "description": "Room/location name"
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "description": "Pairing time"
+        },
+        "updatedAt": {
+          "type": "timestamp",
+          "description": "Last update time"
+        }
+      }
+    },
+
+    "sensorReadings": {
+      "description": "Legacy sensor telemetry retained for existing data/function compatibility. Do not extend this collection with medical interpretation; current monitoring uses temperatureReadings and locationReadings.",
+      "fields": {
+        "id": {
+          "type": "string",
+          "description": "UUID (document ID)"
+        },
+        "childId": {
+          "type": "string",
+          "description": "Child UUID (foreign key)",
+          "index": true
+        },
+        "deviceId": {
+          "type": "string",
+          "description": "Device identifier",
+          "index": true
+        },
+        "timestamp": {
+          "type": "timestamp",
+          "description": "Reading timestamp (for time-series queries)",
+          "composite_index": "childId + timestamp"
+        },
+        "biometrics": {
+          "type": "map",
+          "description": "Biometric measurements",
+          "fields": {
+            "heartRate": {
+              "type": "integer",
+              "description": "Heart rate (bpm)",
+              "range": [0, 250]
+            },
+            "temperature": {
+              "type": "number",
+              "description": "Body temperature (°C)",
+              "range": [30, 42]
+            },
+            "oxygenLevel": {
+              "type": "integer",
+              "description": "SpO2 (%), optional",
+              "range": [0, 100]
+            },
+            "respirationRate": {
+              "type": "integer",
+              "description": "Breaths per minute, optional",
+              "range": [0, 100]
+            },
+            "skinConductance": {
+              "type": "number",
+              "description": "Skin conductance level (mS), optional"
+            }
+          }
+        },
+        "motion": {
+          "type": "map",
+          "description": "Motion detection data",
+          "fields": {
+            "detected": {
+              "type": "boolean",
+              "description": "Motion detected (true/false)"
+            },
+            "intensity": {
+              "type": "number",
+              "description": "Motion intensity (0-1)",
+              "range": [0, 1]
+            },
+            "duration": {
+              "type": "integer",
+              "description": "Motion duration (ms)"
+            }
+          }
+        },
+        "environment": {
+          "type": "map",
+          "description": "Environmental conditions",
+          "fields": {
+            "ambientTemp": {
+              "type": "number",
+              "description": "Room temperature (°C)"
+            },
+            "humidity": {
+              "type": "number",
+              "description": "Room humidity (%)",
+              "range": [0, 100]
+            },
+            "light": {
+              "type": "number",
+              "description": "Light level (lux), optional"
+            }
+          }
+        },
+        "comfortScore": {
+          "type": "integer",
+          "description": "Computed comfort score (0-100)",
+          "range": [0, 100]
+        },
+        "alerts": {
+          "type": "array",
+          "description": "Triggered alert IDs for this reading",
+          "items": "string"
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "description": "Server creation time"
+        }
+      },
+      "ttl": {
+        "description": "Keep detailed readings for 90 days, then archive",
+        "retention_days": 90
+      },
+      "indexes": [
+        {
+          "fields": [{"childId": "asc"}, {"timestamp": "desc"}],
+          "description": "Query latest readings for a child"
+        },
+        {
+          "fields": [{"deviceId": "asc"}, {"timestamp": "desc"}],
+          "description": "Query readings from specific device"
+        }
+      ]
+    },
+
+    "alerts": {
+      "description": "Generated alerts from anomaly detection",
+      "fields": {
+        "id": {
+          "type": "string",
+          "description": "UUID (document ID)"
+        },
+        "childId": {
+          "type": "string",
+          "description": "Affected child UUID"
+        },
+        "deviceId": {
+          "type": "string",
+          "description": "Device that triggered alert"
+        },
+        "type": {
+          "type": "enum",
+          "values": [
+            "heart_rate_high",
+            "heart_rate_low",
+            "fever",
+            "elevated_temperature",
+            "hypothermia",
+            "low_oxygen",
+            "rapid_breathing",
+            "slow_breathing",
+            "prolonged_inactivity",
+            "device_offline",
+            "sensor_fault",
+            "high_humidity",
+            "low_humidity"
+          ],
+          "description": "Alert type/reason"
+        },
+        "severity": {
+          "type": "enum",
+          "values": ["info", "warning", "critical"],
+          "description": "Alert severity level"
+        },
+        "message": {
+          "type": "string",
+          "description": "Human-readable alert message"
+        },
+        "biometricValue": {
+          "type": "number",
+          "description": "Measured value that triggered alert"
+        },
+        "normalRange": {
+          "type": "array",
+          "items": "number",
+          "description": "[min, max] normal range"
+        },
+        "triggeredAt": {
+          "type": "timestamp",
+          "description": "When alert was generated",
+          "index": true
+        },
+        "acknowledged": {
+          "type": "boolean",
+          "description": "Parent acknowledged the alert"
+        },
+        "acknowledgedBy": {
+          "type": "string",
+          "description": "User UID who acknowledged"
+        },
+        "acknowledgedAt": {
+          "type": "timestamp",
+          "description": "When acknowledged"
+        },
+        "autoResolved": {
+          "type": "boolean",
+          "description": "Condition returned to normal"
+        },
+        "resolvedAt": {
+          "type": "timestamp",
+          "description": "When condition normalized"
+        }
+      }
+    },
+
+    "biometricHistory": {
+      "description": "Daily aggregated metrics (lightweight reporting)",
+      "fields": {
+        "id": {
+          "type": "string",
+          "description": "{childId}_{date} (document ID)"
+        },
+        "childId": {
+          "type": "string",
+          "description": "Child UUID"
+        },
+        "date": {
+          "type": "string",
+          "format": "YYYY-MM-DD",
+          "description": "Date of aggregation"
+        },
+        "totalReadings": {
+          "type": "integer",
+          "description": "Number of readings that day"
+        },
+        "metrics": {
+          "type": "map",
+          "description": "Aggregated daily metrics",
+          "fields": {
+            "heartRate": {
+              "type": "map",
+              "fields": {
+                "average": {"type": "number"},
+                "max": {"type": "number"},
+                "min": {"type": "number"},
+                "samples": {"type": "integer"}
+              }
+            },
+            "temperature": {
+              "type": "map",
+              "fields": {
+                "average": {"type": "number"},
+                "max": {"type": "number"},
+                "min": {"type": "number"},
+                "samples": {"type": "integer"}
+              }
+            },
+            "oxygenLevel": {
+              "type": "map",
+              "fields": {
+                "average": {"type": "number"},
+                "max": {"type": "number"},
+                "min": {"type": "number"},
+                "samples": {"type": "integer"}
+              }
+            },
+            "motion": {
+              "type": "map",
+              "fields": {
+                "detectedCount": {"type": "integer"},
+                "noMotionCount": {"type": "integer"},
+                "motionPercentage": {"type": "string"}
+              }
+            }
+          }
+        },
+        "alerts": {
+          "type": "array",
+          "description": "Summary of alerts that day",
+          "items": {
+            "type": "map",
+            "fields": {
+              "type": {"type": "string"},
+              "count": {"type": "integer"},
+              "severity": {"type": "string"}
+            }
+          }
+        },
+        "wellnessScore": {
+          "type": "integer",
+          "description": "Overall wellness score for day",
+          "range": [0, 100]
+        },
+        "timestamp": {
+          "type": "timestamp",
+          "description": "When aggregation was computed"
+        }
+      }
+    },
+
+    "careLog": {
+      "description": "Manual logging of feeding, sleep, diaper changes, etc.",
+      "fields": {
+        "id": {
+          "type": "string",
+          "description": "UUID (document ID)"
+        },
+        "childId": {
+          "type": "string",
+          "description": "Child UUID",
+          "index": true
+        },
+        "userId": {
+          "type": "string",
+          "description": "Caregiver's UID who made entry"
+        },
+        "type": {
+          "type": "enum",
+          "values": ["feeding", "sleep_start", "sleep_end", "diaper", "mood", "note"],
+          "description": "Activity type"
+        },
+        "loggedAt": {
+          "type": "timestamp",
+          "description": "When activity occurred",
+          "index": true
+        },
+        "value": {
+          "type": "string",
+          "description": "Activity value (e.g., 'bottle_120ml', 'happy')"
+        },
+        "note": {
+          "type": "string",
+          "description": "Additional notes"
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "description": "When entry was created"
+        },
+        "updatedAt": {
+          "type": "timestamp",
+          "description": "Last update time"
+        }
+      }
+    },
+
+    "growthRecords": {
+      "description": "Height, weight, and head circumference measurements",
+      "fields": {
+        "id": {
+          "type": "string",
+          "description": "UUID (document ID)"
+        },
+        "childId": {
+          "type": "string",
+          "description": "Child UUID",
+          "index": true
+        },
+        "measuredOn": {
+          "type": "string",
+          "format": "YYYY-MM-DD",
+          "description": "Date of measurement"
+        },
+        "weight": {
+          "type": "number",
+          "description": "Weight in kg"
+        },
+        "height": {
+          "type": "number",
+          "description": "Height in cm"
+        },
+        "headCircumference": {
+          "type": "number",
+          "description": "Head circumference in cm"
+        },
+        "note": {
+          "type": "string",
+          "description": "Clinician notes"
+        },
+        "recordedBy": {
+          "type": "string",
+          "description": "User UID who recorded measurement"
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "description": "When record was created"
+        },
+        "updatedAt": {
+          "type": "timestamp",
+          "description": "Last update time"
+        }
+      }
+    },
+
+    "notifications": {
+      "description": "Push notifications sent to users",
+      "fields": {
+        "id": {
+          "type": "string",
+          "description": "UUID (document ID)"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Recipient user UID",
+          "index": true
+        },
+        "childId": {
+          "type": "string",
+          "description": "Related child UUID"
+        },
+        "alertId": {
+          "type": "string",
+          "description": "Related alert UUID"
+        },
+        "title": {
+          "type": "string",
+          "description": "Notification title"
+        },
+        "body": {
+          "type": "string",
+          "description": "Notification body/message"
+        },
+        "type": {
+          "type": "enum",
+          "values": ["alert", "reminder", "daily_digest", "device_status"],
+          "description": "Notification type"
+        },
+        "severity": {
+          "type": "enum",
+          "values": ["info", "warning", "critical"],
+          "description": "Severity level"
+        },
+        "sentAt": {
+          "type": "timestamp",
+          "description": "When notification was sent"
+        },
+        "read": {
+          "type": "boolean",
+          "description": "Whether user read notification"
+        },
+        "readAt": {
+          "type": "timestamp",
+          "description": "When user read notification"
+        }
+      }
+    }
+  }
+}

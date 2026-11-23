@@ -1,0 +1,254 @@
+{
+  "rules": {
+    // ============================================================================
+    // LIVE DEVICE TELEMETRY (High-frequency updates)
+    // ============================================================================
+    "devices": {
+      "$deviceId": {
+        // Device can write its own status and telemetry
+        ".write": "root.child('authorized_devices').child($deviceId).exists()",
+        ".read": "root.child('authorized_devices').child($deviceId).exists()",
+        
+        "online": {
+          ".validate": "newData.isBoolean()"
+        },
+        
+        "lastPing": {
+          ".validate": "newData.isNumber()"
+        },
+        
+        "activeConnections": {
+          ".validate": "newData.isNumber()"
+        },
+        
+        "telemetry": {
+          "$timestamp": {
+            // High-frequency sensor data
+            ".write": "root.child('authorized_devices').child($deviceId).exists()",
+            ".read": "auth != null",
+            ".validate": "newData.hasChildren(['biometrics', 'motion', 'environment', 'timestamp'])",
+            
+            "biometrics": {
+              ".validate": "newData.hasChildren(['heartRate', 'temperature'])"
+            },
+            
+            "motion": {
+              ".validate": "newData.hasChildren(['detected'])"
+            },
+            
+            "environment": {
+              ".validate": "newData.hasChildren(['ambientTemp', 'humidity'])"
+            }
+          },
+          
+          // Keep only recent telemetry (7 days)
+          ".indexOn": "$timestamp"
+        }
+      },
+      
+      // Authorized devices registry
+      "authorized_devices": {
+        ".read": false,
+        ".write": false,
+        // Only backend can modify
+      }
+    },
+
+    // ============================================================================
+    // USER PRESENCE & ACTIVE SESSIONS
+    // ============================================================================
+    "users": {
+      "$userId": {
+        // Users can only modify their own presence
+        ".write": "auth.uid === $userId || root.child('admin_tokens').child(auth.uid).exists()",
+        ".read": "auth != null",
+        
+        "online": {
+          ".validate": "newData.isBoolean()"
+        },
+        
+        "lastActive": {
+          ".validate": "newData.isNumber()"
+        },
+        
+        "currentChild": {
+          ".validate": "newData.isString()"
+        },
+        
+        "activeDevices": {
+          // List of actively monitored devices
+          ".validate": "newData.isArray()"
+        }
+      }
+    },
+
+    // ============================================================================
+    // REAL-TIME CHILD MONITORING
+    // ============================================================================
+    "children": {
+      "$childId": {
+        ".read": "auth != null",
+        ".write": false,
+        
+        "realtime": {
+          ".read": "auth != null",
+          ".write": "root.child('authorized_devices').exists()",
+          
+          "latest": {
+            // Latest sensor readings
+            ".write": "root.child('authorized_devices').exists()",
+            ".read": "auth != null",
+            
+            "deviceId": {
+              ".validate": "newData.isString()"
+            },
+            
+            "biometrics": {
+              "heartRate": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 250"
+              },
+              "temperature": {
+                ".validate": "newData.isNumber() && newData.val() >= 30 && newData.val() <= 42"
+              },
+              "oxygenLevel": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100"
+              },
+              "respirationRate": {
+                ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100"
+              }
+            },
+            
+            "timestamp": {
+              ".validate": "newData.isNumber()"
+            }
+          },
+          
+          "alerts": {
+            // Real-time alerts (active and unresolved)
+            ".read": "auth != null",
+            ".write": "root.child('authorized_functions').exists()",
+            
+            "$alertId": {
+              "type": {
+                ".validate": "newData.isString()"
+              },
+              "severity": {
+                ".validate": "newData.isString() && (newData.val() === 'warning' || newData.val() === 'critical')"
+              },
+              "message": {
+                ".validate": "newData.isString()"
+              },
+              "triggeredAt": {
+                ".validate": "newData.isNumber()"
+              },
+              "acknowledged": {
+                ".validate": "newData.isBoolean()"
+              }
+            }
+          },
+          
+          "status": {
+            // Child status indicators
+            ".read": "auth != null",
+            ".write": "root.child('authorized_devices').exists()",
+            
+            "comfortScore": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100"
+            },
+            
+            "isSleeping": {
+              ".validate": "newData.isBoolean()"
+            },
+            
+            "lastUpdate": {
+              ".validate": "newData.isNumber()"
+            }
+          }
+        }
+      }
+    },
+
+    // ============================================================================
+    // PUSH NOTIFICATIONS QUEUE
+    // ============================================================================
+    "notifications": {
+      "$userId": {
+        ".read": "auth.uid === $userId",
+        ".write": "root.child('authorized_functions').exists()",
+        
+        "$notificationId": {
+          ".validate": "newData.hasChildren(['title', 'body', 'type', 'timestamp'])",
+          
+          "title": {
+            ".validate": "newData.isString()"
+          },
+          
+          "body": {
+            ".validate": "newData.isString()"
+          },
+          
+          "type": {
+            ".validate": "newData.isString()"
+          },
+          
+          "severity": {
+            ".validate": "newData.isString() && (newData.val() === 'info' || newData.val() === 'warning' || newData.val() === 'critical')"
+          },
+          
+          "timestamp": {
+            ".validate": "newData.isNumber()"
+          },
+          
+          "read": {
+            ".validate": "newData.isBoolean()"
+          }
+        }
+      }
+    },
+
+    // ============================================================================
+    // ACTIVITY LOG (For audit trail)
+    // ============================================================================
+    "activity_log": {
+      ".write": "root.child('authorized_functions').exists() || root.child('admin_tokens').child(auth.uid).exists()",
+      ".read": "root.child('admin_tokens').child(auth.uid).exists()",
+      
+      "$timestamp": {
+        "userId": {
+          ".validate": "newData.isString()"
+        },
+        "action": {
+          ".validate": "newData.isString()"
+        },
+        "resource": {
+          ".validate": "newData.isString()"
+        },
+        "details": {
+          ".validate": "newData.isString() || newData.isNull()"
+        }
+      }
+    },
+
+    // ============================================================================
+    // SYSTEM CONFIGURATION (Admin only)
+    // ============================================================================
+    "config": {
+      ".read": true,
+      ".write": "root.child('admin_tokens').child(auth.uid).exists()",
+      
+      "alert_thresholds": {
+        ".validate": "newData.isObject()"
+      },
+      
+      "maintenance_mode": {
+        ".validate": "newData.isBoolean()"
+      }
+    },
+
+    // ============================================================================
+    // DENY ALL BY DEFAULT
+    // ============================================================================
+    ".read": false,
+    ".write": false
+  }
+}

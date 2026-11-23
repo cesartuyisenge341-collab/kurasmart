@@ -1,0 +1,415 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        (
+          ('admin' in request.auth.token &&
+            request.auth.token.admin == true) ||
+          ('role' in request.auth.token &&
+            request.auth.token.role == 'admin')
+        );
+    }
+
+    function isNumber(value) {
+      return value is int || value is float;
+    }
+
+    function childOwnerMatches(childData) {
+      return isSignedIn() &&
+        (
+          (('userId' in childData) && childData.userId == request.auth.uid) ||
+          (('parentUid' in childData) && childData.parentUid == request.auth.uid)
+        );
+    }
+
+    function isChildOwner(childId) {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/children/$(childId)) &&
+        childOwnerMatches(
+          get(/databases/$(database)/documents/children/$(childId)).data
+        );
+    }
+
+    function isChildCaregiver(childId) {
+      return isSignedIn() &&
+        (
+          exists(/databases/$(database)/documents/children/$(childId)/caregivers/$(request.auth.uid)) ||
+          exists(/databases/$(database)/documents/caregivers/$(childId + '_' + request.auth.uid))
+        );
+    }
+
+    function hasChildAccess(childId) {
+      return isChildOwner(childId) || isChildCaregiver(childId);
+    }
+
+    function isAuthorizedDeviceFor(childId, deviceId) {
+      return isSignedIn() &&
+        'role' in request.auth.token &&
+        request.auth.token.role == 'device' &&
+        'deviceId' in request.auth.token &&
+        request.auth.token.deviceId == deviceId &&
+        'childIds' in request.auth.token &&
+        request.auth.token.childIds is list &&
+        childId in request.auth.token.childIds;
+    }
+
+    function validChildCreate() {
+      return isSignedIn() &&
+        request.resource.data.keys().hasAll(['name', 'dateOfBirth']) &&
+        request.resource.data.keys().hasOnly([
+          'id', 'userId', 'parentUid', 'name', 'dateOfBirth', 'gender',
+          'photoUrl', 'birthWeight', 'birthLength', 'isActive',
+          'createdAt', 'updatedAt'
+        ]) &&
+        request.resource.data.name is string &&
+        request.resource.data.name.size() > 0 &&
+        request.resource.data.dateOfBirth is string &&
+        request.resource.data.dateOfBirth.size() == 10 &&
+        (
+          ('userId' in request.resource.data &&
+            request.resource.data.userId == request.auth.uid) ||
+          ('parentUid' in request.resource.data &&
+            request.resource.data.parentUid == request.auth.uid)
+        ) &&
+        (!('userId' in request.resource.data) ||
+          request.resource.data.userId == request.auth.uid) &&
+        (!('parentUid' in request.resource.data) ||
+          request.resource.data.parentUid == request.auth.uid);
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn() && request.auth.uid == userId;
+
+      allow create: if isSignedIn() &&
+        request.auth.uid == userId &&
+        request.resource.data.keys().hasAll(['uid', 'email', 'fullName']) &&
+        request.resource.data.keys().hasOnly([
+          'uid', 'email', 'fullName', 'phone', 'photoUrl', 'language',
+          'fcmTokens', 'settings', 'createdAt', 'updatedAt'
+        ]) &&
+        request.resource.data.uid == userId &&
+        request.resource.data.email == request.auth.token.email &&
+        request.resource.data.fullName is string &&
+        request.resource.data.fullName.size() > 0 &&
+        (!('fcmTokens' in request.resource.data) ||
+          request.resource.data.fcmTokens is list) &&
+        (!('settings' in request.resource.data) ||
+          request.resource.data.settings.keys().hasOnly([
+            'tempUnit', 'weightUnit', 'heightUnit', 'pushEnabled', 'theme'
+          ]));
+
+      allow update: if isSignedIn() &&
+        request.auth.uid == userId &&
+        request.resource.data.uid == resource.data.uid &&
+        request.resource.data.email == resource.data.email &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'fullName', 'phone', 'photoUrl', 'language', 'fcmTokens',
+          'settings', 'updatedAt'
+        ]) &&
+        (!('fcmTokens' in request.resource.data) ||
+          request.resource.data.fcmTokens is list) &&
+        (!('settings' in request.resource.data) ||
+          request.resource.data.settings.keys().hasOnly([
+            'tempUnit', 'weightUnit', 'heightUnit', 'pushEnabled', 'theme'
+          ]));
+
+      allow delete: if false;
+
+      match /settings/{settingId} {
+        allow read: if isSignedIn() && request.auth.uid == userId;
+        allow create, update: if isSignedIn() &&
+          request.auth.uid == userId &&
+          request.resource.data.keys().hasOnly([
+            'tempUnit', 'weightUnit', 'heightUnit', 'pushEnabled', 'theme'
+          ]);
+        allow delete: if false;
+      }
+
+      match /devices/{userDeviceId} {
+        allow get, list: if isSignedIn() && request.auth.uid == userId;
+        allow write: if false;
+      }
+    }
+
+    match /children/{childId} {
+      allow get: if hasChildAccess(childId);
+      allow list: if isSignedIn() &&
+        (
+          ('userId' in resource.data &&
+            resource.data.userId == request.auth.uid) ||
+          ('parentUid' in resource.data &&
+            resource.data.parentUid == request.auth.uid)
+        );
+      allow create: if validChildCreate();
+      allow update: if isChildOwner(childId) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'name', 'dateOfBirth', 'gender', 'photoUrl', 'birthWeight',
+          'birthLength', 'isActive', 'updatedAt'
+        ]);
+      allow delete: if isChildOwner(childId);
+
+      match /caregivers/{caregiverId} {
+        allow get, list: if isChildOwner(childId) ||
+          (isSignedIn() && request.auth.uid == caregiverId);
+        allow create, update: if isChildOwner(childId) &&
+          request.resource.data.keys().hasAll(['caregiverId', 'role']) &&
+          request.resource.data.keys().hasOnly([
+            'caregiverId', 'role', 'name', 'email', 'phone',
+            'relationship', 'addedAt', 'isAuthorized'
+          ]) &&
+          request.resource.data.caregiverId == caregiverId &&
+          request.resource.data.role in ['caregiver', 'viewer'];
+        allow delete: if isChildOwner(childId);
+      }
+    }
+
+    match /caregivers/{caregiverId} {
+      allow get, list: if isSignedIn() &&
+        (
+          ('caregiverId' in resource.data &&
+            resource.data.caregiverId == request.auth.uid) ||
+          ('childId' in resource.data &&
+            resource.data.childId is string &&
+            isChildOwner(resource.data.childId))
+        );
+      allow write: if false;
+    }
+
+    match /devices/{deviceId} {
+      allow get: if isAdmin() ||
+        (isSignedIn() && 'userId' in resource.data &&
+          resource.data.userId == request.auth.uid) ||
+        ('childId' in resource.data &&
+          resource.data.childId is string &&
+          hasChildAccess(resource.data.childId));
+      allow list: if isAdmin() ||
+        (isSignedIn() && 'userId' in resource.data &&
+          resource.data.userId == request.auth.uid);
+      allow write: if isAdmin();
+    }
+
+    match /sensorReadings/{readingId} {
+      allow get, list: if hasChildAccess(resource.data.childId);
+      allow create: if request.resource.data.keys().hasAll([
+          'childId', 'deviceId', 'timestamp', 'biometrics'
+        ]) &&
+        isAuthorizedDeviceFor(
+          request.resource.data.childId,
+          request.resource.data.deviceId
+        );
+      allow update, delete: if false;
+    }
+
+    match /temperatureReadings/{readingId} {
+      allow get, list: if hasChildAccess(resource.data.childId);
+      allow create: if request.resource.data.keys().hasAll([
+          'childId', 'deviceId', 'temperatureC', 'recordedAt'
+        ]) &&
+        isNumber(request.resource.data.temperatureC) &&
+        request.resource.data.temperatureC >= -20 &&
+        request.resource.data.temperatureC <= 80 &&
+        isAuthorizedDeviceFor(
+          request.resource.data.childId,
+          request.resource.data.deviceId
+        );
+      allow update, delete: if false;
+    }
+
+    match /locationReadings/{readingId} {
+      allow get, list: if hasChildAccess(resource.data.childId);
+      allow create: if request.resource.data.keys().hasAll([
+          'childId', 'deviceId', 'latitude', 'longitude', 'recordedAt'
+        ]) &&
+        isNumber(request.resource.data.latitude) &&
+        request.resource.data.latitude >= -90 &&
+        request.resource.data.latitude <= 90 &&
+        isNumber(request.resource.data.longitude) &&
+        request.resource.data.longitude >= -180 &&
+        request.resource.data.longitude <= 180 &&
+        isAuthorizedDeviceFor(
+          request.resource.data.childId,
+          request.resource.data.deviceId
+        );
+      allow update, delete: if false;
+    }
+
+    match /soundEvents/{eventId} {
+      allow get, list: if hasChildAccess(resource.data.childId);
+      allow create: if request.resource.data.keys().hasAll([
+          'childId', 'deviceId', 'eventType', 'confidence', 'startedAt'
+        ]) &&
+        request.resource.data.keys().hasOnly([
+          'childId', 'deviceId', 'eventType', 'confidence', 'startedAt',
+          'durationSeconds', 'modelVersionId', 'isSimulated'
+        ]) &&
+        request.resource.data.eventType in [
+          'crying', 'shouting', 'speech', 'laughter', 'background_noise'
+        ] &&
+        isNumber(request.resource.data.confidence) &&
+        request.resource.data.confidence >= 0 &&
+        request.resource.data.confidence <= 1 &&
+        isAuthorizedDeviceFor(
+          request.resource.data.childId,
+          request.resource.data.deviceId
+        );
+      allow update, delete: if false;
+    }
+
+    match /alerts/{alertId} {
+      allow get, list: if hasChildAccess(resource.data.childId);
+      allow create, delete: if isAdmin();
+      allow update: if isChildOwner(resource.data.childId) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'acknowledged', 'acknowledgedBy', 'acknowledgedAt'
+        ]) &&
+        request.resource.data.acknowledged == true &&
+        request.resource.data.acknowledgedBy == request.auth.uid;
+    }
+
+    match /biometricHistory/{historyId} {
+      allow get, list: if hasChildAccess(resource.data.childId);
+      allow write: if isAdmin();
+    }
+
+    match /archived_sensorReadings/{readingId} {
+      allow get, list: if hasChildAccess(resource.data.childId);
+      allow write: if isAdmin();
+    }
+
+    match /archived_careLog/{logId} {
+      allow get, list: if hasChildAccess(resource.data.childId);
+      allow write: if isAdmin();
+    }
+
+    match /careLog/{logId} {
+      allow get, list: if hasChildAccess(resource.data.childId);
+      allow create: if hasChildAccess(request.resource.data.childId) &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.keys().hasAll([
+          'childId', 'userId', 'type', 'loggedAt'
+        ]);
+      allow update: if hasChildAccess(resource.data.childId) &&
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'type', 'loggedAt', 'value', 'note', 'updatedAt'
+        ]);
+      allow delete: if isChildOwner(resource.data.childId);
+    }
+
+    match /growthRecords/{recordId} {
+      allow get, list: if hasChildAccess(resource.data.childId);
+      allow create: if isChildOwner(request.resource.data.childId) &&
+        request.resource.data.recordedBy == request.auth.uid &&
+        request.resource.data.keys().hasAll([
+          'childId', 'measuredOn', 'recordedBy'
+        ]);
+      allow update: if isChildOwner(resource.data.childId) &&
+        request.resource.data.childId == resource.data.childId &&
+        request.resource.data.recordedBy == resource.data.recordedBy;
+      allow delete: if isChildOwner(resource.data.childId);
+    }
+
+    match /milestones/{milestoneId} {
+      allow get, list: if isSignedIn() &&
+        (isAdmin() || resource.data.isPublished == true);
+      allow write: if isAdmin();
+    }
+
+    match /childProgress/{progressId} {
+      allow get, list: if hasChildAccess(resource.data.childId);
+      allow create: if isChildOwner(request.resource.data.childId) &&
+        request.resource.data.recordedBy == request.auth.uid &&
+        request.resource.data.keys().hasAll([
+          'childId', 'milestoneId', 'status', 'recordedBy'
+        ]);
+      allow update: if isChildOwner(resource.data.childId) &&
+        request.resource.data.childId == resource.data.childId &&
+        request.resource.data.recordedBy == resource.data.recordedBy;
+      allow delete: if isChildOwner(resource.data.childId);
+    }
+
+    match /learningCategories/{categoryId} {
+      allow get, list: if isAdmin() || resource.data.isPublished == true;
+      allow write: if isAdmin();
+    }
+
+    match /lessons/{lessonId} {
+      allow get, list: if isAdmin() || resource.data.isPublished == true;
+      allow write: if isAdmin();
+    }
+
+    match /audioAssets/{assetId} {
+      allow get, list: if isAdmin() || resource.data.isPublished == true;
+      allow write: if isAdmin();
+    }
+
+    match /learningSchedules/{scheduleId} {
+      allow get, list: if hasChildAccess(resource.data.childId);
+      allow create: if isChildOwner(request.resource.data.childId) &&
+        request.resource.data.createdBy == request.auth.uid;
+      allow update: if isChildOwner(resource.data.childId) &&
+        request.resource.data.childId == resource.data.childId &&
+        request.resource.data.createdBy == resource.data.createdBy;
+      allow delete: if isChildOwner(resource.data.childId);
+    }
+
+    match /learningSessions/{sessionId} {
+      allow get, list: if hasChildAccess(resource.data.childId);
+      allow create: if isChildOwner(request.resource.data.childId) &&
+        request.resource.data.createdBy == request.auth.uid;
+      allow update: if isChildOwner(resource.data.childId) &&
+        request.resource.data.childId == resource.data.childId &&
+        request.resource.data.createdBy == resource.data.createdBy &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'status', 'endedAt', 'durationSeconds'
+        ]);
+      allow delete: if isChildOwner(resource.data.childId);
+    }
+
+    match /learningAttempts/{attemptId} {
+      allow get, list: if hasChildAccess(resource.data.childId);
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /caregiverContacts/{contactId} {
+      allow get, list: if isChildOwner(resource.data.childId);
+      allow create: if isChildOwner(request.resource.data.childId);
+      allow update: if isChildOwner(resource.data.childId) &&
+        request.resource.data.childId == resource.data.childId;
+      allow delete: if isChildOwner(resource.data.childId);
+    }
+
+    match /safeZones/{zoneId} {
+      allow get, list: if hasChildAccess(resource.data.childId);
+      allow create: if isChildOwner(request.resource.data.childId);
+      allow update: if isChildOwner(resource.data.childId) &&
+        request.resource.data.childId == resource.data.childId;
+      allow delete: if isChildOwner(resource.data.childId);
+    }
+
+    match /notifications/{notificationId} {
+      allow get, list: if isSignedIn() &&
+        resource.data.userId == request.auth.uid;
+      allow create, delete: if isAdmin();
+      allow update: if isSignedIn() &&
+        resource.data.userId == request.auth.uid &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'read', 'readAt'
+        ]);
+    }
+
+    match /modelVersions/{modelVersionId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

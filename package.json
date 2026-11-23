@@ -1,0 +1,17 @@
+{
+  "name": "kurasmart",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "npm --prefix mobile start",
+    "android": "npm --prefix mobile run android",
+    "ios": "npm --prefix mobile run ios",
+    "web": "npm --prefix mobile run web",
+    "test:child-age": "npm --prefix mobile run test:age",
+    "test:firestore": "npm --prefix backend/firestore test"
+  },
+  "dependencies": {
+    "react-dom": "19.3.0",
+    "react-native-web": "^0.21.4"
+  }
+}
